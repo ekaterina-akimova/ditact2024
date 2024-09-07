@@ -1,0 +1,429 @@
+---
+title: 'Einführung in R: Teil 1'
+author: "Ekaterina Akimova-Höpner"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# Einführung
+
+# 1. Einfache mathematische Operationen
+
+```{r}
+4 + 5
+sqrt(36)
+4 + 2 * 2
+log10(100)
+log(100, base = 4)
+50 + pi
+```
+
+# 2. Variablen
+
+## 2.1 Variablen zuweisen
+
+```{r}
+x <- 5
+a <- 2 + 9
+b <- (x + a) * 2
+x <- b - 2
+
+alter <- 30
+name <- "Max"
+
+
+mein_vergleich <- 6 > 8 
+neue_var <- (x < 10 && x > 5) | b == 65
+
+heights <- c(163, 170, NA, 167, NA) 
+```
+
+### Exercise 0:
+
+Was ist der aktuelle Wert von `b`?
+
+
+## 2.2 Datentypen überprüfen
+
+```{r}
+class(alter)
+class(name)
+class(mein_vergleich)
+```
+
+# 3. Einfache Funktionen
+
+## 3.1 Eingebaute Funktionen
+
+```{r}
+heights <- c(163, 170, NA, 167) 
+mean(heights)
+
+which(is.na(heights))
+
+?mean
+
+mean(heights, na.rm = TRUE)
+```
+
+### Exercise 1.1
+
+a) Was ist die Summe der ersten 100 positiven ganzen Zahlen? 
+Die Formel für die Summe der ganzen Zahlen von 1 bis n lautet $\frac{n(n+1)}{2}$ .
+
+```{r}
+n <- 100
+
+n*(n+1)/2
+```
+
+b) Was ist die Summe der ersten 1000 positiven ganzen Zahlen? 
+
+### Exercise 1.2
+
+Probiere `sum(seq(1,n))` aus. Was macht `seq()`? Was macht `sum()`?
+
+## 3.2 Eigene Funktionen erstellen
+
+```{r}
+# Eine einfache Funktion, die zwei Zahlen addiert
+addiere <- function(a, b) {
+  return(a + b)
+}
+
+addiere(5, 7)
+
+numbers_to_n <- function(n) {
+  summe <- n*(n+1)/2
+}
+numbers_to_n(100)
+
+```
+
+
+# 4. Hilfe in R
+```{r}
+?seq
+vignette(package = "dplyr")
+```
+
+# Packages 
+
+```{r, eval = FALSE}
+
+install.packages(c("ggplot2", "dslabs", "dplyr"))
+
+```
+
+# 5. Einfache Navigation in Dataframes
+Erkunde den Datensatz "murders"
+
+```{r, message = FALSE}
+library(dslabs)
+data(murders)
+
+print(murders)
+
+head(murders)
+
+str(murders)
+
+names(murders)
+
+nrow(murders)
+
+table(murders$region)
+```
+
+## 5.2 Spalten und Zeilen auswählen
+
+```{r}
+# Eine Spalte auswählen
+murders$state
+
+# Eine Zeile auswählen
+murders[2, ]
+
+# Eine spezifische Zelle auswählen
+murders[3, "population"]
+```
+
+## 5.3 Beispiele der einfachen Manipulationen
+
+```{r, warning = FALSE}
+murders_sued <- gsub("South", "Sued", murders$region)
+murders$region <- murders_sued
+
+murders$murder_rate <- murders$total / murders$population
+murders$rate_percent <- murders$total * 100 / murders$population
+
+lowest <- min(murders$murder_rate)
+highest <- max(murders$murder_rate)
+
+murders_west <- murders[which(murders$region == "West"),]
+
+murders_west[which(murders_west$murder_rate == min(murders_west$murder_rate) |
+                murders_west$murder_rate == max(murders_west$murder_rate)), "state"]
+
+murders[which(murders$murder_rate == max(murders$murder_rate)), "state"]
+
+murders_20_100 <- murders[which(murders$total > 20 & murders$total < 100),]
+
+murders_1000000 <- murders[which(murders$population > 1000000),]
+murders_kleiner1000000 <- murders[which(murders$population <= 1000000),]
+
+t.test(murders_1000000$murder_rate, murders_kleiner1000000$murder_rate)
+
+plot(murders$population, murders$total)
+abline(lm(total ~ population, murders))
+
+cor(murders$population, murders$total)
+
+qqplot(murders$population, murders$total)
+
+```
+# 6. Wrangling mit dplyr
+
+```{r, message = FALSE, warning = FALSE}
+library(dplyr)
+
+data(mtcars)
+
+data <- mtcars
+
+data$auto_marke <- rownames(data)
+
+rownames(data) <- NULL
+
+# write.table(data, "output_data/mtcars.txt", sep = "\t")
+
+selected_data <- select(data, mpg, cyl, hp, auto_marke)
+
+filtered_data <- filter(data, mpg > 20)
+
+arranged_data <- arrange(data, desc(mpg))
+
+mutated_data <- mutate(data, hp_to_weight = hp / wt)
+
+summary_data <- summarise(data, avg_mpg = mean(mpg),
+                          avg_hp = median(hp))
+
+# mean over all columns 
+summary_data_all <- data %>% summarise(across(where(is.numeric), mean, na.rm = TRUE))
+
+
+summary_data_piped <- data %>%
+  filter(mpg > 20) %>%
+  mutate(hp_to_weight = hp / wt) %>% 
+  summarise(avg_hp = mean(hp))
+
+
+grouped_summary <- data %>%
+  group_by(cyl) %>%
+  summarise(
+    avg_mpg = mean(mpg),
+    avg_hp = mean(hp)
+  )
+
+###############################################################################
+
+
+df1 <- data.frame(id = 1:5, value1 = letters[1:5])
+df2 <- data.frame(id = 3:7, value2 = LETTERS[3:7])
+
+inner <- inner_join(df1, df2, by = "id")
+
+left <- left_join(df1, df2, by = "id")
+
+right <- right_join(df1, df2, by = "id")
+
+full <- full_join(df1, df2, by = "id")
+
+```
+
+# 7. Daten-Visualisierung
+
+```{r}
+library(ggplot2)
+
+ggplot(mtcars, aes(x = wt, y = mpg)) + 
+  geom_point()
+
+ggplot(mtcars, aes(x = wt, y = mpg, color = factor(cyl), size = hp)) +
+  geom_point() +
+  labs(title = "Scatter plot of MPG vs Weight", x = "Weight (1000 lbs)", y = "Miles per Gallon") +
+  theme_minimal()
+
+ggplot(mtcars, aes(x = mpg)) + 
+  geom_histogram(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Histogram of Miles per Gallon", x = "MPG", y = "Count")
+
+ggplot(mtcars, aes(x = factor(cyl))) + 
+  geom_bar(fill = "#FF0000") +
+  labs(title = "Count of Cylinders", x = "Number of Cylinders", y = "Count")
+
+mtcars %>% ggplot(aes(x = factor(cyl), y = mpg)) + 
+  geom_boxplot(fill = "lightgreen") +
+  labs(title = "Boxplot of MPG by Cylinders", x = "Number of Cylinders", y = "Miles per Gallon") + 
+  theme(axis.text = element_text(size = 20))
+```
+Farbenpaletten in R
+http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
+
+# 8. Übungen
+
+## Übung 1
+
+1. Tabelle "survey_example.txt" einlesen.
+2. Mittelwert von height_cm für männliche und für weibliche StudienteilnehmerInnnen ausrechen.
+3. Fehlerquelle identifizieren.
+3. Verwendet gsub(), um das Problem zu lösen.
+Tipp: "[0-9]+" steht für beliebige Anzahl an Zahlen,
+      "\\1" steht stellvertretend für eine Zahlengruppe.
+4. Zeichnet ein Boxplot mit den Körpergrößen der Männer und der Frauen.
+
+Lösung:
+```{r}
+heights <- read.table("survey_example.txt")
+new_heights <- gsub("([0-9]+)cm", "\\1", heights$height_cm)
+new_heights <- gsub("([0-9]+),([0-9]+)", "\\1.\\2", new_heights)
+
+heights %>% mutate(height_cm = as.numeric(new_heights)) %>%
+  group_by(gender) %>% summarise(avg = mean(height_cm))
+
+heights %>% mutate(height_cm = as.numeric(new_heights)) %>%
+  ggplot(aes(x = gender, y = height_cm)) + 
+  geom_boxplot()
+```
+
+## Übung 2
+
+1. Erkundet den eingebauten Datensatz data(sleep).
+2. Ändert die Gruppenbezeichungen von 1/2 zu "received_drug_a"/"received_drug_b".
+Tipp: ihr könnt recode() innerhalb von mutate() anwenden.
+3. Berechnet den Mittelwert von extra_sleep für jede Gruppe.
+4. Zeigt eure Ergebnisse in einem bar plot.
+Tipp: verwendet "stat = "identity" Argument.
+
+Lösung:
+```{r}
+data(sleep)
+?sleep
+
+average_sleep <- sleep %>%
+  mutate(group = recode(group, `1` = "received_drug_A", `2` = "received_drug_B")) %>% 
+  group_by(group) %>%
+  summarise(mean_sleep = mean(extra))
+
+ggplot(average_sleep, aes(x = factor(group), y = mean_sleep)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(x = "Group", y = "Average Extra Sleep (hours)", title = "Average Extra Sleep by Group") +
+  theme_minimal()
+```
+
+
+## Übung 3
+
+0. library(dslabs).
+1. Installiert package "ggrepel".
+2. Erkundet den eingebauten Datensatz data(divorce_margarine).
+3. Gibt es eine Korrelation zwischen der Anzahl der Scheidungen und dem Margarinekonsum?
+4. Versucht die Problematik in einem Bild/Scatter plot/... darzustellen.
+Tipp: Schaut euch "geom_text_repel" function an. 
+
+Lösung:
+```{r, eval = FALSE}
+install.packages("ggrepel")
+```
+```{r}
+install.packages("ggrepel")
+library(dslabs)
+library(ggrepel)
+data(divorce_margarine)
+
+divorce_margarine %>% 
+  ggplot(aes(x = divorce_rate_maine, y = margarine_consumption_per_capita, label = year)) +
+  geom_text_repel(nudge_x = 0.005) +
+  geom_point(aes(color=divorce_rate_maine), size = 4) +
+  xlab("Divorce Rate Maine") +
+  ylab("Margarine Consumption Per Capita") +
+  ggtitle("Divorce Rate and Margarine Consumption")
+```
+
+## Übung 4
+
+1. Erstellt einen "toy"-Datensatz:
+
+```{r}
+neuro_data <- data.frame(
+  patient_id = 1:100,
+  diagnosis = sample(c("Aphasie", "Dysarthrie", "Schlaganfall"), 100, replace = TRUE),
+  symptom_severity = sample(1:10, 100, replace = TRUE),
+  therapy_sessions = sample(1:30, 100, replace = TRUE)
+)
+```
+
+2. Filtert für Patienten mit Schlaganfall oder Aphasie und mehr als 20 Therapie-Sitzungen.
+3. Erstellt ein Histogramm der Symptomschwere.
+
+Lösung:
+```{r}
+filtered_data <- neuro_data %>%
+  filter(diagnosis %in% c("Aphasie", "Schlaganfall"),
+         therapy_sessions > 20)
+
+ggplot(filtered_data, aes(x = symptom_severity, fill = diagnosis)) +
+  geom_histogram(binwidth = 1, position = "dodge", color = "black") +
+  labs(x = "Symptomschwere", y = "Häufigkeit", title = "Histogramm der Symptomschwere nach Diagnose") +
+  theme_minimal()
+```
+
+## Übung 5
+
+1. Führt folgende Befehle aus:
+```{r, eval = FALSE}
+install.packages(c("maps", "mapdata"))
+```
+```{r}
+library(ggplot2)
+library(maps)
+library(mapdata)
+
+# Beispiel Sehenswürdigkeiten in Wien, Salzburg und Graz
+landmarks <- data.frame(
+  name = c("Stephansdom, Wien", "Festung Hohensalzburg, Salzburg", "Schlossberg, Graz"),
+  lat = c(48.2082, 47.7990, 47.0702),
+  lon = c(16.3738, 13.0430, 15.4395)
+)
+
+# Landkarte von Österreich
+au_map <- map_data("worldHires", region = "Austria")
+```
+
+2. Erkundet ggmap-Dokumentation 
+3. Vervollstängigt den Code:
+```{r, eval = FALSE}
+ggplot() +
+  geom_map(data = XXX, map = XXX,
+           aes(x = long, y = lat, map_id = region),
+           fill = "lightgrey", color = XXX) +
+  geom_point(data = landmarks, aes(x = XXX, y = XXX), XXX = "red", size = 3) +
+  geom_text(data = landmarks, aes(x = XXX, y = XXX, label = name), vjust = -1, hjust = 1.5, color = "black") +
+  labs(title = "Landmarks in Vienna", x = "Longitude", y = "Latitude") +
+  coord_fixed(ratio = 1.2)
+```
+
+Lösung:
+```{r}
+ggplot() +
+  geom_map(data = au_map, map = au_map,
+           aes(x = long, y = lat, map_id = region),
+           fill = "lightgrey", color = "black") +
+  geom_point(data = landmarks, aes(x = lon, y = lat), color = "red", size = 3) +
+  geom_text(data = landmarks, aes(x = lon, y = lat, label = name), vjust = -1, hjust = 1.5, color = "black") +
+  labs(title = "Landmarks in Vienna", x = "Longitude", y = "Latitude") +
+  coord_fixed(ratio = 1.2)
+```
+
